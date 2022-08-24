@@ -29,7 +29,6 @@ def __s3_api_request(
     short_date = utc_dt.strftime('%Y%m%d')
     date = utc_dt.strftime('%a, %d %b %Y %H:%M:%S GMT')
     service = 's3'
-
     signed_headers = headers or {}
     signed_headers.update({
         'Host': 'storage.yandexcloud.net',
@@ -40,11 +39,9 @@ def __s3_api_request(
         content_md5 = base64.b64encode(hashlib.md5(payload).digest()).decode()
         payload_hash = hashlib.sha256(payload).hexdigest()
         signed_headers.update({
-        # TODO: support 'x-amz-content-sha256': 'STREAMING-AWS4-HMAC-SHA256-PAYLOAD'
             'x-amz-content-sha256': payload_hash,
             'Content-Type': 'application/octet-stream',
             'Content-Length': content_length,
-            'x-amz-storage-class': 'COLD',
             'Content-MD5': content_md5,
         })
     else:
@@ -70,8 +67,9 @@ def __s3_api_request(
 # upload
 def upload_file(
         filepath: str,
-        bucket: str = None,
-        object_key: str = None,
+        bucket: str,
+        object_key: str,
+        storage_class: str = 'COLD',
         access_key_id: str = None,
         access_key: str = None,
         region: str = 'ru-central1'
@@ -92,55 +90,40 @@ def upload_file(
     with open(filepath, 'rb') as f:
         data = f.read()
 
-    return upload_bytes(data, bucket, object_key, region, access_key_id, access_key)
+    return upload_bytes(
+        data,
+        bucket,
+        object_key,
+        storage_class,
+        region,
+        access_key_id,
+        access_key
+    )
 
 
 def upload_bytes(
         data: bytes,
         bucket: str,
-        key: str,
+        object_key: str,
+        storage_class: str = 'COLD',
         region: str = 'ru-central1',
         access_key_id: str = None,
         access_key: str = None
     ):
 
-    access_key_id = access_key_id or os.getenv('YANDEX_CLOUD_S3_ACCESS_KEY_ID')
-    access_key = access_key or os.getenv('YANDEX_CLOUD_S3_ACCESS_KEY')
-
-    content_length = len(data)
-    utc_dt = datetime.datetime.utcnow()
-    short_date = utc_dt.strftime('%Y%m%d')
-    date = utc_dt.strftime('%a, %d %b %Y %H:%M:%S GMT')
-    url = f'/{bucket}/{key}'
-    service = 's3'
-
-    content_md5 = base64.b64encode(hashlib.md5(data).digest()).decode()
-    payload_hash = hashlib.sha256(data).hexdigest()
-    signed_headers = (
-        # TODO: support 'x-amz-content-sha256': 'STREAMING-AWS4-HMAC-SHA256-PAYLOAD'
-        ('Host', 'storage.yandexcloud.net'),
-        ('x-amz-content-sha256', payload_hash),
-        ('Content-Type', 'application/octet-stream'),
-        ('Content-Length', content_length),
-        ('Date', date),  # Thu, 18 Jan 2018 09:57:35 GMT.
-        ('x-amz-storage-class', 'COLD'),
-        ('Content-MD5', content_md5),
-    )
-    aws4_signature = create_signature(region, service, 'PUT', url,
-                                      signed_headers, data, access_key, utc_dt)
-    headers_names = sorted([name.lower().strip() for name, _ in signed_headers])
     headers = {
-        'Authorization': 'AWS4-HMAC-SHA256 '
-                         f'Credential={access_key_id}/{short_date}/{region}/{service}/aws4_request, '
-                         f'SignedHeaders={";".join(headers_names)}, '
-                         f'Signature={aws4_signature}',
+        # TODO: support 'x-amz-content-sha256': 'STREAMING-AWS4-HMAC-SHA256-PAYLOAD'
+        'x-amz-storage-class': storage_class,
     }
-    headers.update({k: v for k, v in signed_headers})
-    connection = HTTPConnection('storage.yandexcloud.net')
-    connection.request('PUT', url, data, headers)
-    response = connection.getresponse()
-    connection.close()
-    return response
+    return __s3_api_request(
+        f'/{bucket}/{object_key}',
+        'PUT',
+        payload=data,
+        headers=headers,
+        region=region,
+        access_key_id=access_key_id,
+        access_key=access_key
+    )
 
 
 # get
