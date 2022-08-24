@@ -34,3 +34,4 @@ import yandex_cloud_s3
 
 
 yandex_cloud_s3.upload_bytes(b'Hello, world', 'test_bucket', 'test.txt')
+data = yandex_cloud_s3.get_object('test_bucket', 'test.txt')
