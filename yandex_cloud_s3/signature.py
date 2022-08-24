@@ -8,11 +8,11 @@ from urllib.parse import urlsplit, quote
 
 def hmac_sha256(
         key: bytes,
-        message: bytes,
+        message: str,
         hex=False
     ) -> typing.Union[bytes, str]:
 
-    obj = hmac.new(key, message, 'sha256')
+    obj = hmac.new(key, message.encode(), 'sha256')
     return obj.hexdigest() if hex else obj.digest()
 
 
@@ -99,10 +99,10 @@ def create_signature(
         secret_static_key = os.getenv('YANDEX_CLOUD_STATIC_KEY')
     current_date = utc_dt.strftime('%Y%m%d')
 
-    date_key = hmac_sha256(f'AWS4{secret_static_key}'.encode(), current_date.encode())
-    region_key = hmac_sha256(date_key, region.encode())
-    service_key = hmac_sha256(region_key, service.encode())
-    signing_key = hmac_sha256(service_key, b'aws4_request')
+    date_key = hmac_sha256(f'AWS4{secret_static_key}'.encode(), current_date)
+    region_key = hmac_sha256(date_key, region)
+    service_key = hmac_sha256(region_key, service)
+    signing_key = hmac_sha256(service_key, 'aws4_request')
     canonical_request = __create_canonical_request(http_method, url, headers, payload)
     string_to_sign = __create_string_to_sign(region, service, canonical_request, utc_dt)
-    return hmac_sha256(signing_key, string_to_sign.encode(), hex=True)
+    return hmac_sha256(signing_key, string_to_sign, hex=True)

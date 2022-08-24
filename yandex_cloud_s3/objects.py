@@ -4,7 +4,7 @@ import hashlib
 import os
 from http.client import HTTPConnection
 
-from .sign import create_signature
+from .signature import create_signature
 
 
 '''
