@@ -1,37 +1,21 @@
 # yandex-cloud-s3
 Software development kit for object storage in Yandex Cloud
 
-## Документация
-* https://cloud.yandex.ru/docs/storage/s3/
-
-
-### Общий вид запроса к API
-```
-{GET|HEAD|PUT|DELETE} /<bucket>/<key> HTTP/2
-Host: storage.yandexcloud.net
-Content-Length: length
-Date: date
-Authorization: authorization string (AWS Signature Version 4)
-
-Request_body
-```
-
-Имя бакета можно указать как часть имени хоста. В этом случае запрос примет вид:
-```
-{GET|HEAD|PUT|DELETE} /<key>} HTTP/2
-Host: <bucket>.storage.yandexcloud.net
-...
-```
-
-### Идентификаторы классов хранилища
-https://cloud.yandex.ru/docs/storage/concepts/storage-class#storage-class-identifiers
-
-
-### Пример использования
+## Example
 
 ```
-import yandex_cloud_s3
+import os
+from yandex_cloud_s3 import upload_bytes, get_object
 
 
-yandex_cloud_s3.upload_bytes(b'Hello, world', 'test_bucket', 'test.txt')
-data = yandex_cloud_s3.get_object('test_bucket', 'test.txt')
+if __name__ == '__main__':
+    os.environ['YANDEX_CLOUD_S3_ACCESS_KEY_ID'] = 'test'
+    os.environ['YANDEX_CLOUD_S3_ACCESS_KEY'] = 'test'
+    upload_bytes(b'Hello, world', 'test_bucket', 'test.txt')
+    data = get_object('test_bucket', 'test.txt')
+    assert data == b'Hello, world'
+```
+
+#### Links
+* [Documentation](https://cloud.yandex.com/docs/storage/s3/)
+* [Storage class identifiers](https://cloud.yandex.com/docs/storage/concepts/storage-class#storage-class-identifiers)
